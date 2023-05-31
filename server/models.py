@@ -25,7 +25,7 @@ class Activity(db.Model, SerializerMixin):
     created_at = db.Column(db.DateTime, server_default=db.func.now())
     updated_at = db.Column(db.DateTime, onupdate=db.func.now())
 
-    signups = db.relationship("Signup", backref='activity')
+    signups = db.relationship("Signup", cascade="all,delete", backref='activity')
 
     serialize_rules = ('-signups.activity',)
 
@@ -43,11 +43,13 @@ class Camper(db.Model, SerializerMixin):
 
     signups = db.relationship("Signup", backref='camper')
 
+    activities = association_proxy("signups", "activity")
+
     serialize_rules = ('-signups.camper',)
 
     @validates('name')
     def validate_name(self, key, name):
-        if not name:
+        if not name or len(name) < 1:
             raise ValueError("Camper must have a name")
         return name
     
@@ -71,7 +73,7 @@ class Signup(db.Model, SerializerMixin):
     camper_id = db.Column(db.Integer, db.ForeignKey('campers.id'))
     activity_id = db.Column(db.Integer, db.ForeignKey('activities.id'))
 
-    serialize_rules = ('-camper.signups', '-activity.signups',)
+    serialize_rules = ('-camper.signups', '-activity.signups')
 
     def __repr__(self):
         return f'<Signup {self.id}>'

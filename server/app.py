@@ -62,11 +62,13 @@ class Campers(Resource):
 api.add_resource(Campers, '/campers')
 
 class CampersById(Resource):
+    # If the Camper exists, return JSON data in the format below. Note: you will need to serialize the data for this response differently than for the GET /campers route. Make sure to include an array of activities for each camper.
+
     def get(self, id):
         camper = Camper.query.filter_by(id = id).first()
 
         if camper: 
-            camper_dict = camper.to_dict()
+            camper_dict = camper.to_dict(only = ("id", "name", "age", "activities"))
 
             response = make_response(
                 camper_dict,
@@ -105,7 +107,30 @@ class AcitivitiesById(Resource):
 
         return response
     
+    def patch(self, id):
+        activity = Activity.query.filter_by(id = id).first()
+
+        for attr in request.json:
+            # if attr == "name":
+            # This allows you to specify what the user is allowed to change. i.e. you wouldn't want someone to be able to update IDs
+            setattr(activity, attr, request.json[attr])
+
+        db.session.add(activity)
+        db.session.commit()
+
+        activity_dict = activity.to_dict()
+
+        response = make_response(
+            activity_dict,
+            202
+        )
+
+        return response
+
+    
     def delete(self, id):
+        # If the Activity exists, it should be removed from the database, along with any Signups that are associated with it (a Signup belongs to an Activity, so you need to delete the Signups before the Activity can be deleted).
+
         activity = Activity.query.filter_by(id = id).first()
         if activity:
 
@@ -136,6 +161,8 @@ class Signups(Resource):
         return response 
     
     def post(self):
+        # If the Signup is created successfully, send back a response with the data related to the Activity:
+        # Test contradicts what is being asked in Canvas
         try:
             new_signup = Signup(
                 time=request.json['time'],
@@ -146,7 +173,7 @@ class Signups(Resource):
             db.session.add(new_signup)
             db.session.commit()
 
-            new_signup_dict = new_signup.to_dict()
+            new_signup_dict = new_signup.activity.to_dict(only = ("id", "name", "difficulty"))
 
             response = make_response(
                 new_signup_dict,
